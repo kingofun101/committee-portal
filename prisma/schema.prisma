@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(MEMBER)
+  createdAt    DateTime @default(now())
+
+  assignedContacts Contact[] @relation("AssignedTo")
+  notes            Note[]
+
+  accounts Account[]
+  sessions Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  assignedToId   String?
+  parentName     String
+  email          String?
+  phone          String?
+  neighborhood   String?
+  emailSent      Boolean  @default(false)
+  voicemailLeft  Boolean  @default(false)
+  talkedToFamily Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  assignedTo User?    @relation("AssignedTo", fields: [assignedToId], references: [id])
+  campers    Camper[]
+  notes      Note[]
+}
+
+model Camper {
+  id        String @id @default(cuid())
+  contactId String
+  name      String
+  age       Int?
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  contactId String
+  authorId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+}
+
+model Script {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  updatedAt DateTime @updatedAt
+}
